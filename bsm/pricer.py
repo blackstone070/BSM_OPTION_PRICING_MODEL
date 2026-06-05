@@ -1,61 +1,68 @@
 import numpy as np
 from scipy.stats import norm
 
-def bsm_prices(S,K,T,r,sigma,option_type='call'):
+def bsm_price(S, K, T, r, sigma, option_type='call'):
     """
-    Note 
-    S : current price, K : Strike Price, T : Time to expiry in years days/365
-    r : Risk Free rate usually in india is 0.065 and forusa is 0.05 
-    sigma: Implied Volatility indecimal """
-    if T <=0:
-        #AT EXPIRY
-        if option_type == 'call':
-                return max(S-K,0)
-        return max(K-S,0)
-    d1 = (np.log(S/K) + (r+0.5*sigma**2)*T)/(sigma*np.sqrt(T))
-    d2 = d1-sigma*np.sqrt(T)
+    S     = Current stock price
+    K     = Strike price
+    T     = Time to expiry in years
+    r     = Risk-free rate (0.065 for India, 0.05 for US)
+    sigma = Implied volatility as decimal (0.25 = 25%)
+    """
+    if T <= 0:
+        return max(S - K, 0) if option_type == 'call' else max(K - S, 0)
 
-    if option_type =='call':
-         price = S *norm.cdf(d1)-K*np.exp(-r*T)*norm.cdf(d2)
+    # FIX: Guard against sigma=0 causing division by zero
+    sigma = max(sigma, 1e-6)
+
+    d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+
+    if option_type == 'call':
+        price = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
     else:
-         price = K *np.exp(-r*T)*norm.cdf(-d2) - S *norm.cdf(-d1)
-    return price
+        price = K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
+
+    return max(price, 0.0)
 
 
-def compute_greeks(S,K,T,r,sigma,option_type = 'call'):
-     """ CALCULATE and Return ALL 5 GREEKS"""
-     if T<=0:
-          return {g: 0.0 for g in ['delta','gamma','vega','theta','rho']}
-     d1=(np.log(S/K))+(r+0.5*sigma**2)*T/ (sigma* np.sqrt(T))
-     d2 = d1-sigma*np.sqrt(T)
+def compute_greeks(S, K, T, r, sigma, option_type='call'):
+    """Returns all 5 Greeks as a dictionary"""
+    if T <= 0:
+        return {g: 0.0 for g in ['delta', 'gamma', 'theta', 'vega', 'rho']}
 
-     #Delta
-     if option_type == 'call':
-          delta = norm.cdf(d1)
-     else:
-          delta = norm.cdf(d1)-1
-     #gamma 
-     gamma = norm.pdf(d1) / (S*sigma * np.sqrt(T))
-     # Theta (per calendar day)
-     theta_base = -(S * norm.pdf(d1) * sigma) / (2 * np.sqrt(T))
-     if option_type == 'call':
+    # FIX: Guard against sigma=0
+    sigma = max(sigma, 1e-6)
+
+    d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+
+    # Delta
+    delta = norm.cdf(d1) if option_type == 'call' else norm.cdf(d1) - 1
+
+    # Gamma — same for call and put; near 0 for deep ITM/OTM (correct math)
+    gamma = norm.pdf(d1) / (S * sigma * np.sqrt(T))
+
+    # Theta — per calendar day
+    theta_base = -(S * norm.pdf(d1) * sigma) / (2 * np.sqrt(T))
+    if option_type == 'call':
         theta = (theta_base - r * K * np.exp(-r * T) * norm.cdf(d2)) / 365
-     else:
+    else:
         theta = (theta_base + r * K * np.exp(-r * T) * norm.cdf(-d2)) / 365
 
-     # Vega (per 1% move in IV)
-     vega = S * norm.pdf(d1) * np.sqrt(T) / 100
+    # Vega — per 1% move in IV; near 0 for deep ITM/OTM (correct math)
+    vega = S * norm.pdf(d1) * np.sqrt(T) / 100
 
-     # Rho (per 1% move in rate)
-     if option_type == 'call':
+    # Rho — per 1% move in rate
+    if option_type == 'call':
         rho = K * T * np.exp(-r * T) * norm.cdf(d2) / 100
-     else:
+    else:
         rho = -K * T * np.exp(-r * T) * norm.cdf(-d2) / 100
-     return {
+
+    return {
         'delta': round(delta, 4),
         'gamma': round(gamma, 4),
         'theta': round(theta, 4),
         'vega':  round(vega, 4),
-        'rho':   round(rho, 4)
+        'rho':   round(rho, 4),
     }
-
