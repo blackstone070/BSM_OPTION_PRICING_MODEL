@@ -1,66 +1,91 @@
-import yfinance as yf
 import pandas as pd
 from datetime import datetime
-import requests
-import streamlit as st  # <-- ADD THIS IMPORT
+from yahooquery import Ticker
+import streamlit as st
 
-# FIX 1: Cache data for 5 minutes so users moving sliders don't spam Yahoo
 @st.cache_data(ttl=300)
-def fetch_options_chain(ticker: str):
+def fetch_options_chain(ticker_symbol: str):
     """
     Returns:
       spot_price  : float
       expiries    : list of date strings
       chain       : dict keyed by expiry → {calls: df, puts: df}
     """
-    # FIX 2: Create a custom request session with a standard browser User-Agent
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    })
-    
-    # Pass the session to the Ticker object
-    stock = yf.Ticker(ticker, session=session)
+    # Initialize the Ticker object using yahooquery
+    # It automatically handles cookies, crumbs, and browser headers
+    stock = Ticker(ticker_symbol)
 
-    # FIX: fast_info can fail; add fallback to history
+    # 1. Fetch Spot Price cleanly
     try:
-        # Note: yfinance attribute spelling is typically case-sensitive camelCase or snake_case 
-        # based on version. If 'last_price' fails, 'lastPrice' is the alternative fallback.
-        spot_price = stock.fast_info['last_price']
+        # returns a nested dict: { 'AAPL': { 'regularMarketPrice': 175.5 } }
+        price_data = stock.price[ticker_symbol]
+        if isinstance(price_data, dict) and 'regularMarketPrice' in price_data:
+            spot_price = float(price_data['regularMarketPrice'])
+        else:
+            raise ValueError
     except Exception:
+        # Fallback to history summary if pricing dict is blocked
         hist = stock.history(period="1d")
         if hist.empty:
-            raise ValueError(f"Could not fetch price for {ticker}")
-        spot_price = float(hist['Close'].iloc[-1])
+            raise ValueError(f"Could not fetch price for {ticker_symbol}")
+        spot_price = float(hist['close'].iloc[-1])
 
-    expiries = stock.options
+    # 2. Get Expiries and Option Chains
+    try:
+        # yahooquery downloads ALL option chains for all expiries in one single fast API call!
+        # This completely avoids running a loop that spams requests
+        opt_df = stock.option_chain
 
-    chain = {}
-    # Fetching up to 6 expiries
-    for exp in expiries[:6]:
-        try:
-            opt = stock.option_chain(exp)
-            cols = ['strike', 'lastPrice', 'bid', 'ask', 'impliedVolatility', 'volume', 'openInterest']
+        if opt_df is None or opt_df.empty:
+            return spot_price, [], {}
 
-            calls = opt.calls[cols].copy()
-            puts  = opt.puts[cols].copy()
+        # yahooquery returns a multi-indexed DataFrame where level 0 is 'expiration'
+        # Reset index to access 'expiration' and 'optionType' as normal columns
+        opt_df = opt_df.reset_index()
+        
+        # Extract unique expiry strings and convert them to standard formats if needed
+        expiries = sorted(opt_df['expiration'].astype(str).unique().tolist())
 
-            # FIX: Clean IV — Yahoo sometimes returns 0 or astronomically high values
+        chain = {}
+        cols_mapping = {
+            'strike': 'strike',
+            'lastPrice': 'lastPrice',
+            'bid': 'bid',
+            'ask': 'ask',
+            'impliedVolatility': 'impliedVolatility',
+            'volume': 'volume',
+            'openInterest': 'openInterest'
+        }
+
+        # Format up to 6 expiries to match your original structure
+        for exp in expiries[:6]:
+            # Filter the single master dataframe instead of hitting the network repeatedly!
+            exp_data = opt_df[opt_df['expiration'].astype(str) == exp]
+            
+            calls_raw = exp_data[exp_data['optionType'] == 'calls']
+            puts_raw = exp_data[exp_data['optionType'] == 'puts']
+
+            # Keep only your required columns
+            calls = calls_raw[list(cols_mapping.keys())].copy()
+            puts = puts_raw[list(cols_mapping.keys())].copy()
+
+            # Clean Volatility outliers
             for df in (calls, puts):
                 df['impliedVolatility'] = df['impliedVolatility'].apply(
                     lambda iv: iv if (pd.notna(iv) and 0.001 < iv < 20.0) else float('nan')
                 )
 
             chain[exp] = {'calls': calls, 'puts': puts}
-        except Exception:
-            # If one specific expiry fails, keep moving so the whole app doesn't crash
-            continue
 
-    return spot_price, list(expiries), chain
+        return spot_price, expiries, chain
+
+    except Exception as e:
+        st.error(f"Error structuring options data: {e}")
+        return spot_price, [], {}
 
 
 def time_to_expiry(expiry_str: str) -> float:
     """Returns T in years"""
     expiry = datetime.strptime(expiry_str, "%Y-%m-%d")
     T = (expiry - datetime.now()).days / 365
-    return max(T, 1/365)  # FIX: min 1 day to avoid T=0 in Greeks
+    return max(T, 1/365)
