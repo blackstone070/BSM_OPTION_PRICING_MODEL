@@ -6,7 +6,7 @@ from bsm.iv_solver import implied_volatility
 from charts.visualisations import payoff_diagram, volatility_skew, iv_surface
 
 st.set_page_config(page_title="BSM Options Pricer", layout="wide", page_icon="📈")
-st.title("📈 BSM Options Pricer & Greeks Dashboard")
+st.title(" BSM Options Pricer & Greeks Dashboard")
 
 # ── Sidebar inputs ──────────────────────────────────────
 with st.sidebar:
@@ -35,7 +35,6 @@ st.metric("Spot Price", f"${spot:.2f}")
 # ── Expiry + Strike selector ─────────────────────────────
 col1, col2, col3 = st.columns(3)
 with col1:
-   
     expiry_options = expiries[:6] if (expiries and len(expiries) > 0) else ["No options to select"]
     expiry = st.selectbox("Expiry", expiry_options)
 with col2:
@@ -135,3 +134,33 @@ if expiries and expiry != "No options to select" and chain:
 
 else:
     st.warning("Please wait for options chain data to load fully or try another ticker.")
+
+# ── Footer Section ──────────────────────────────────────────────────────────
+st.markdown("<br><hr>", unsafe_allow_html=True)
+footer_col1, footer_col2 = st.columns([2, 3])
+
+with footer_col1:
+    st.markdown(
+        "<p style='color: #64748b; font-size: 14px; margin-top: 5px;'>"
+        "© 2026 BSM Option Pricing Dashboard | Built for Quantitative Analytics"
+        "</p>", 
+        unsafe_allow_html=True
+    )
+
+with footer_col2:
+    # Action Item: Replace the placeholder URLs below with your actual links!
+    linkedin_url = "https://linkedin.com/in/your-profile"
+    github_url   = "https://github.com/blackstone070"
+    resume_url   = "https://your-resume-link.com"
+    email_addr   = "mailto:your-email@example.com"
+
+    badge_html = f"""
+    <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: center;">
+        <span style="color: #94a3b8; font-size: 14px; font-weight: 500;">More about Devesh:</span>
+        <a href="https://www.linkedin.com/in/devesh-joshi-41b52b28a" target="_blank"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+        <a href="https://github.com/blackstone070" target="_blank"><img src="https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white" alt="GitHub"></a>
+        <a href="https://drive.google.com/file/d/16bOwixiuS-VnUEYIvetg6NYrXwoTyojj/view?usp=sharing" target="_blank"><img src="https://img.shields.io/badge/Resume-E6162E?style=flat&logo=adobe-acrobat-reader&logoColor=white" alt="Resume"></a>
+        <a href="dnjoshi070@gmail.com"><img src="https://img.shields.io/badge/Email-D14836?style=flat&logo=gmail&logoColor=white" alt="Email"></a>
+    </div>
+    """
+    st.markdown(badge_html, unsafe_allow_html=True)
