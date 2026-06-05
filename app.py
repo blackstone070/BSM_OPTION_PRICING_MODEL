@@ -35,8 +35,9 @@ st.metric("Spot Price", f"${spot:.2f}")
 # ── Expiry + Strike selector ─────────────────────────────
 col1, col2, col3 = st.columns(3)
 with col1:
-    # Safely handle empty expiry arrays
-    expiry = st.selectbox("Expiry", expiries[:6] if expiries else ["No options to select"])
+   
+    expiry_options = expiries[:6] if (expiries and len(expiries) > 0) else ["No options to select"]
+    expiry = st.selectbox("Expiry", expiry_options)
 with col2:
     opt_type = st.selectbox("Option Type", ["call", "put"])
 with col3:
