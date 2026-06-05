@@ -64,7 +64,7 @@ def iv_surface(chain_data, spot):
             (calls['strike'] < spot * 1.2) &
             # ADD THESE THREE LINES
             (calls['impliedVolatility'] > 0.05) &
-            (calls['impliedVolatility'] < 2.0)  &
+            (calls['impliedVolatility'] < 1.5)  &
             (calls['volume'] > 0)
         ]
         for _, row in calls.iterrows():
