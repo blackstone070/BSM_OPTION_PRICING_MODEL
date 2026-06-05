@@ -115,19 +115,24 @@ if expiries and expiry != "No options to select" and chain:
         )
 
     with tab2:
-        skew_df = calls_df if opt_type == 'call' else puts_df
-        skew_df = skew_df[skew_df['impliedVolatility'] > 0.001].dropna(subset=['impliedVolatility'])
-        if len(skew_df) > 1:
-            st.plotly_chart(
-                volatility_skew(
-                    skew_df['strike'].tolist(),
-                    skew_df['impliedVolatility'].tolist(),
-                    expiry, spot
-                ),
-                use_container_width=True
-            )
-        else:
-            st.warning("Not enough valid IV data for skew chart on this expiry.")
+    skew_df = calls_df if opt_type == 'call' else puts_df
+    skew_df = skew_df.dropna(subset=['impliedVolatility'])
+    
+    # ADD THIS FILTER HERE
+    skew_df = skew_df[
+        (skew_df['impliedVolatility'] > 0.05) &
+        (skew_df['impliedVolatility'] < 2.0)  &
+        (skew_df['volume'] > 0)
+    ]
+    
+    st.plotly_chart(
+        volatility_skew(
+            skew_df['strike'].tolist(),
+            skew_df['impliedVolatility'].tolist(),
+            expiry, spot
+        ),
+        use_container_width=True
+    )
 
     with tab3:
         st.plotly_chart(iv_surface(chain, spot), use_container_width=True)
