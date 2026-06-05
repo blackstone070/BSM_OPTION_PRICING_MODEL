@@ -120,7 +120,7 @@ if expiries and expiry != "No options to select" and chain:
     
         skew_df = skew_df[
             (skew_df['impliedVolatility'] > 0.05) &
-            (skew_df['impliedVolatility'] < 2.0)  &
+            (skew_df['impliedVolatility'] < 1.5)  &
             (skew_df['volume'] > 0)
         ]
     
