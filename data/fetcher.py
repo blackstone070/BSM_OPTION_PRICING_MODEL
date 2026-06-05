@@ -72,3 +72,12 @@ def fetch_options_chain(ticker_symbol: str):
     except Exception as e:
         # Graceful handling so app components don't experience TypeError cascades
         return spot_price, [], {}
+
+def time_to_expiry(expiry_str: str) -> float:
+    """Returns T in years"""
+    try:
+        expiry = datetime.strptime(expiry_str, "%Y-%m-%d")
+        T = (expiry - datetime.now()).days / 365
+        return max(T, 1/365)  # Avoid T=0 to prevent division by zero in Greeks
+    except Exception:
+        return 1/365
