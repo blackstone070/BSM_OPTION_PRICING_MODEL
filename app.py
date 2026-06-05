@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from PIL import Image
 from data.fetcher import fetch_options_chain, time_to_expiry
 from bsm.pricer import bsm_price, compute_greeks
 from bsm.iv_solver import implied_volatility
