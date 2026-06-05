@@ -41,7 +41,10 @@ with col2:
 with col3:
     position = st.selectbox("Position", ["long", "short"])
 
-T        = time_to_expiry(expiry)
+if expiries and expiry != "No options to select":
+    T = time_to_expiry(expiry)
+else:
+    st.warning("Please wait for options chain data to load fully or try another ticker.")
 calls_df = chain[expiry]['calls']
 puts_df  = chain[expiry]['puts']
 df       = calls_df if opt_type == 'call' else puts_df
