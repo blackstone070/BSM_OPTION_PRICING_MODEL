@@ -115,23 +115,46 @@ if expiries and expiry != "No options to select" and chain:
         )
 
     with tab2:
-        skew_df = calls_df if opt_type == 'call' else puts_df
-        skew_df = skew_df.dropna(subset=['impliedVolatility'])
-    
-        skew_df = skew_df[
-            (skew_df['impliedVolatility'] > 0.05) &
-            (skew_df['impliedVolatility'] < 1.5)  &
-            (skew_df['volume'] > 0)
+        # Dynamic IV ceiling based on days to expiry
+        days_to_expiry = max(int(T * 365), 1)
+        if days_to_expiry <= 7:
+            iv_ceiling = 2.0
+        elif days_to_expiry <= 30:
+            iv_ceiling = 1.0
+        else:
+            iv_ceiling = 0.8
+
+        calls_skew = calls_df.dropna(subset=['impliedVolatility'])
+        puts_skew  = puts_df.dropna(subset=['impliedVolatility'])
+
+        puts_skew = puts_skew[
+            (puts_skew['impliedVolatility'] > 0.05) &
+            (puts_skew['impliedVolatility'] < iv_ceiling) &
+            (puts_skew['volume'] > 0)
         ]
-    
-        st.plotly_chart(
-            volatility_skew(
-                skew_df['strike'].tolist(),
-                skew_df['impliedVolatility'].tolist(),
-                expiry, spot
-            ),
-            use_container_width=True
-        )
+        calls_skew = calls_skew[
+            (calls_skew['impliedVolatility'] > 0.05) &
+            (calls_skew['impliedVolatility'] < iv_ceiling) &
+            (calls_skew['volume'] > 0)
+        ]
+
+        puts_side  = puts_skew[puts_skew['strike'] <= spot]
+        calls_side = calls_skew[calls_skew['strike'] >= spot]
+
+        combined = pd.concat([puts_side, calls_side]).drop_duplicates('strike')
+        combined = combined.sort_values('strike')
+
+        if combined.empty:
+            st.warning("No valid options data after filtering for this expiry.")
+        else:
+            st.plotly_chart(
+                volatility_skew(
+                    combined['strike'].tolist(),
+                    combined['impliedVolatility'].tolist(),
+                    expiry, spot
+                ),
+                use_container_width=True
+            )
 
     with tab3:
         st.plotly_chart(iv_surface(chain, spot), use_container_width=True)
