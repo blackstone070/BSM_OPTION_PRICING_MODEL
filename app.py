@@ -5,7 +5,8 @@ from bsm.pricer import bsm_price, compute_greeks
 from bsm.iv_solver import implied_volatility
 from charts.visualisations import payoff_diagram, volatility_skew, iv_surface
 
-st.set_page_config(page_title="BSM Options Pricer", layout="wide", page_icon="📈")
+app_icon = Image.open("icon.png")
+st.set_page_config(page_title="BSM Options Pricer", layout="wide", page_icon=app_icon)
 st.title(" BSM Options Pricer & Greeks Dashboard")
 
 # ── Sidebar inputs ──────────────────────────────────────
