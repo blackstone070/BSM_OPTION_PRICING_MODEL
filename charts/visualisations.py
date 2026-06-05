@@ -56,28 +56,45 @@ def volatility_skew(strikes, ivs, expiry_label, spot):
 
 
 def iv_surface(chain_data, spot):
+    """3D IV surface across strikes and expiries"""
     strikes_all, expiries_all, ivs_all = [], [], []
+
     for i, (exp, data) in enumerate(chain_data.items()):
+       
+        if i == 0:
+            iv_ceiling = 2.0    # nearest expiry — allow higher IV
+        elif i <= 2:
+            iv_ceiling = 1.0    # medium term
+        else:
+            iv_ceiling = 0.8    # far dated — strict filter
+
         calls = data['calls'].dropna(subset=['impliedVolatility'])
         calls = calls[
             (calls['strike'] > spot * 0.8) &
             (calls['strike'] < spot * 1.2) &
-            # ADD THESE THREE LINES
             (calls['impliedVolatility'] > 0.05) &
-            (calls['impliedVolatility'] < 1.5)  &
+            (calls['impliedVolatility'] < iv_ceiling) &
             (calls['volume'] > 0)
         ]
+
         for _, row in calls.iterrows():
             strikes_all.append(row['strike'])
             expiries_all.append(i)
             ivs_all.append(row['impliedVolatility'] * 100)
 
     fig = go.Figure(data=[go.Scatter3d(
-        x=strikes_all, y=expiries_all, z=ivs_all,
+        x=strikes_all,
+        y=expiries_all,
+        z=ivs_all,
         mode='markers',
-        marker=dict(size=4, color=ivs_all, colorscale='Viridis',
-                    colorbar=dict(title='IV %'))
+        marker=dict(
+            size=4,
+            color=ivs_all,
+            colorscale='Viridis',
+            colorbar=dict(title='IV %')
+        )
     )])
+
     fig.update_layout(
         title='IV Surface',
         scene=dict(
@@ -88,4 +105,5 @@ def iv_surface(chain_data, spot):
         template='plotly_dark',
         height=500
     )
+
     return fig
