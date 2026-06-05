@@ -56,16 +56,20 @@ def volatility_skew(strikes, ivs, expiry_label, spot):
 
 
 def iv_surface(chain_data, spot):
-    """3D IV surface across strikes and expiries"""
     strikes_all, expiries_all, ivs_all = [], [], []
-
     for i, (exp, data) in enumerate(chain_data.items()):
         calls = data['calls'].dropna(subset=['impliedVolatility'])
-        calls = calls[(calls['strike'] > spot * 0.8) &
-                      (calls['strike'] < spot * 1.2)]
+        calls = calls[
+            (calls['strike'] > spot * 0.8) &
+            (calls['strike'] < spot * 1.2) &
+            # ADD THESE THREE LINES
+            (calls['impliedVolatility'] > 0.05) &
+            (calls['impliedVolatility'] < 2.0)  &
+            (calls['volume'] > 0)
+        ]
         for _, row in calls.iterrows():
             strikes_all.append(row['strike'])
-            expiries_all.append(i)          # numeric index for axis
+            expiries_all.append(i)
             ivs_all.append(row['impliedVolatility'] * 100)
 
     fig = go.Figure(data=[go.Scatter3d(
