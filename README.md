@@ -1,5 +1,6 @@
 This Project is made to show up skills and knowledge in finance scetor
 the project moto is as follows:
+Live Website is at https://bsmpricingmodel.streamlit.app
 web app that:
 1. Takes any stock listed on exchnage (here use yahoo finance to get free data)
 2. Fetch live option chain from Yahoo Finance
@@ -70,3 +71,9 @@ Done the working o fetching datat where we took specific ticker and download its
 
 
 now main work is to show the give data for which lets build visuliasation.py file 
+
+
+Finally we deploy this project after clearing so many bugs and error 
+You can visit at https://bsmpricingmodel.streamlit.app website and use this model for free
+
+Hope you enjoy the journey!!
